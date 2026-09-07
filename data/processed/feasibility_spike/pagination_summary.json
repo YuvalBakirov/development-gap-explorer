@@ -1,0 +1,90 @@
+[
+  {
+    "resource": "countries",
+    "pages": 1,
+    "page_counts": [
+      295
+    ],
+    "total_rows": 295,
+    "reported_total": 295,
+    "last_updated": null
+  },
+  {
+    "resource": "NY.GDP.PCAP.KD",
+    "pages": 4,
+    "page_counts": [
+      1000,
+      1000,
+      1000,
+      975
+    ],
+    "total_rows": 3975,
+    "reported_total": 3975,
+    "last_updated": "2026-07-13"
+  },
+  {
+    "resource": "NY.GDP.PCAP.KD.ZG",
+    "pages": 4,
+    "page_counts": [
+      1000,
+      1000,
+      1000,
+      975
+    ],
+    "total_rows": 3975,
+    "reported_total": 3975,
+    "last_updated": "2026-07-13"
+  },
+  {
+    "resource": "SL.UEM.TOTL.ZS",
+    "pages": 4,
+    "page_counts": [
+      1000,
+      1000,
+      1000,
+      975
+    ],
+    "total_rows": 3975,
+    "reported_total": 3975,
+    "last_updated": "2026-07-13"
+  },
+  {
+    "resource": "SP.DYN.LE00.IN",
+    "pages": 4,
+    "page_counts": [
+      1000,
+      1000,
+      1000,
+      975
+    ],
+    "total_rows": 3975,
+    "reported_total": 3975,
+    "last_updated": "2026-07-13"
+  },
+  {
+    "resource": "SP.POP.TOTL",
+    "pages": 4,
+    "page_counts": [
+      1000,
+      1000,
+      1000,
+      975
+    ],
+    "total_rows": 3975,
+    "reported_total": 3975,
+    "last_updated": "2026-07-13"
+  },
+  {
+    "resource": "SE.SEC.ENRR",
+    "pages": 4,
+    "page_counts": [
+      1000,
+      1000,
+      1000,
+      975
+    ],
+    "total_rows": 3975,
+    "reported_total": 3975,
+    "last_updated": "2026-07-13"
+  }
+]

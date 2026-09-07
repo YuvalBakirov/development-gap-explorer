@@ -1,0 +1,21 @@
+{
+  "join_key": [
+    "countryiso3code",
+    "year"
+  ],
+  "eligible_country_year_grid": 3255,
+  "core_indicators": [
+    "NY.GDP.PCAP.KD",
+    "SL.UEM.TOTL.ZS",
+    "SP.DYN.LE00.IN",
+    "SP.POP.TOTL"
+  ],
+  "core_complete_rows": 2730,
+  "core_complete_pct": 83.87,
+  "core_plus_growth_complete_rows": 2728,
+  "core_plus_growth_complete_pct": 83.81,
+  "all_six_complete_rows": 1942,
+  "all_six_complete_pct": 59.66,
+  "countries_with_any_core_complete_row": 186,
+  "countries_with_all_15_core_rows": 173
+}

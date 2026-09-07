@@ -1,0 +1,62 @@
+[
+  {
+    "indicator_id": "NY.GDP.PCAP.KD",
+    "expected_country_years": 3255,
+    "non_null_observations": 3122,
+    "coverage_pct": 95.91,
+    "missing_observations": 133,
+    "countries_with_any_value": 213,
+    "first_observed_year": 2010,
+    "last_observed_year": 2024
+  },
+  {
+    "indicator_id": "NY.GDP.PCAP.KD.ZG",
+    "expected_country_years": 3255,
+    "non_null_observations": 3133,
+    "coverage_pct": 96.25,
+    "missing_observations": 122,
+    "countries_with_any_value": 213,
+    "first_observed_year": 2010,
+    "last_observed_year": 2024
+  },
+  {
+    "indicator_id": "SL.UEM.TOTL.ZS",
+    "expected_country_years": 3255,
+    "non_null_observations": 2796,
+    "coverage_pct": 85.9,
+    "missing_observations": 459,
+    "countries_with_any_value": 187,
+    "first_observed_year": 2010,
+    "last_observed_year": 2024
+  },
+  {
+    "indicator_id": "SP.DYN.LE00.IN",
+    "expected_country_years": 3255,
+    "non_null_observations": 3255,
+    "coverage_pct": 100.0,
+    "missing_observations": 0,
+    "countries_with_any_value": 217,
+    "first_observed_year": 2010,
+    "last_observed_year": 2024
+  },
+  {
+    "indicator_id": "SP.POP.TOTL",
+    "expected_country_years": 3255,
+    "non_null_observations": 3255,
+    "coverage_pct": 100.0,
+    "missing_observations": 0,
+    "countries_with_any_value": 217,
+    "first_observed_year": 2010,
+    "last_observed_year": 2024
+  },
+  {
+    "indicator_id": "SE.SEC.ENRR",
+    "expected_country_years": 3255,
+    "non_null_observations": 2157,
+    "coverage_pct": 66.27,
+    "missing_observations": 1098,
+    "countries_with_any_value": 197,
+    "first_observed_year": 2010,
+    "last_observed_year": 2024
+  }
+]

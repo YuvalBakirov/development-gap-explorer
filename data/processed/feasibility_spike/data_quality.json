@@ -1,0 +1,38 @@
+{
+  "duplicate_keys": {
+    "NY.GDP.PCAP.KD": {},
+    "NY.GDP.PCAP.KD.ZG": {},
+    "SL.UEM.TOTL.ZS": {},
+    "SP.DYN.LE00.IN": {},
+    "SP.POP.TOTL": {},
+    "SE.SEC.ENRR": {}
+  },
+  "unmapped_entity_ids": {
+    "NY.GDP.PCAP.KD": [],
+    "NY.GDP.PCAP.KD.ZG": [],
+    "SL.UEM.TOTL.ZS": [],
+    "SP.DYN.LE00.IN": [],
+    "SP.POP.TOTL": [],
+    "SE.SEC.ENRR": []
+  },
+  "observation_status_counts": {
+    "NY.GDP.PCAP.KD": {
+      "blank": 3122
+    },
+    "NY.GDP.PCAP.KD.ZG": {
+      "blank": 3133
+    },
+    "SL.UEM.TOTL.ZS": {
+      "blank": 2796
+    },
+    "SP.DYN.LE00.IN": {
+      "blank": 3255
+    },
+    "SP.POP.TOTL": {
+      "blank": 3255
+    },
+    "SE.SEC.ENRR": {
+      "blank": 2157
+    }
+  }
+}
