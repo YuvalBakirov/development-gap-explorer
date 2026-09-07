@@ -1,3 +1,3 @@
-# No third-party package is needed for the extraction foundation.
-# Streamlit will be added when the dashboard stage begins.
-
+# The extraction and transformation layers use Python's standard library.
+# Streamlit renders the business-facing dashboard.
+streamlit==1.30.0
