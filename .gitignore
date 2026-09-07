@@ -4,3 +4,7 @@ __pycache__/
 .pytest_cache/
 .streamlit/
 work/
+data/raw/world_bank/
+data/processed/etl_run_summary.json
+data/processed/latest_run.json
+data/processed/run-*/
