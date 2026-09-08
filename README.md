@@ -147,6 +147,29 @@ reports are in `outputs/etl_run_validation_report.md` and
   calculated from observed countries in that window and documented in the
   processed metric-definitions file.
 
+## Assumptions
+
+- A World Bank entity classified as a country/economy is appropriate for the
+  comparison population. Aggregate groups are excluded.
+- Start-to-end changes over 2010–2024 are useful descriptive summaries, while
+  the country view retains annual observations for further inspection.
+- The research signals are intentionally transparent, simple screening rules.
+  They are not risk scores or a ranking of country performance.
+- The data source's published values and metadata are used as received. The
+  pipeline validates structure and ranges but does not revise source values.
+
+## What I would improve with more time
+
+- Let analysts choose a validated comparison window in the dashboard and
+  regenerate metrics for that window.
+- Add peer-group comparisons, such as countries in the same income group or
+  region, while preserving the distinction between descriptive comparison and
+  causal analysis.
+- Add a scheduled refresh and historical run comparison to make data updates
+  observable over time.
+- Add integration tests that run against a recorded API fixture and browser
+  smoke tests for the Streamlit interface.
+
 ## Repository guide
 
 | Path | Purpose |
