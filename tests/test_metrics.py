@@ -16,16 +16,18 @@ from src.metrics import (
 FIELDS = [
     "country_code", "country_name", "region_id", "region_name", "income_level_id",
     "income_level_name", "year", "gdp_per_capita_constant_2015_usd",
-    "life_expectancy_years", "unemployment_total_pct", "population_total",
+    "gdp_per_capita_growth_annual_pct", "life_expectancy_years", "unemployment_total_pct",
+    "population_total", "secondary_enrollment_gross_pct",
 ]
 
 
-def row(code: str, year: int, gdp: object, life: object, unemployment: object, population: object) -> dict[str, object]:
+def row(code: str, year: int, gdp: object, life: object, unemployment: object, population: object, growth: object = 2, enrolment: object = 80) -> dict[str, object]:
     return {
         "country_code": code, "country_name": code, "region_id": "R", "region_name": "Region",
         "income_level_id": "HIC", "income_level_name": "High income", "year": year,
         "gdp_per_capita_constant_2015_usd": gdp, "life_expectancy_years": life,
-        "unemployment_total_pct": unemployment, "population_total": population,
+        "gdp_per_capita_growth_annual_pct": growth, "unemployment_total_pct": unemployment,
+        "population_total": population, "secondary_enrollment_gross_pct": enrolment,
     }
 
 
@@ -56,6 +58,8 @@ class MetricsTests(unittest.TestCase):
             self.assertIn(HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN, result["AAA"]["research_signals"])
             self.assertIn(GDP_PER_CAPITA_INCREASE_WITH_UNEMPLOYMENT_INCREASE, result["AAA"]["research_signals"])
             self.assertEqual(result["DDD"]["unemployment_change_pp"], "")
+            self.assertEqual(result["AAA"]["gdp_per_capita_growth_change_pp"], "0.0")
+            self.assertEqual(result["AAA"]["secondary_enrollment_change_pp"], "0.0")
             self.assertIn("insufficient_core_data", result["DDD"]["research_signals"])
             self.assertIn("Missing core metrics", result["DDD"]["research_signal_explanation"])
 

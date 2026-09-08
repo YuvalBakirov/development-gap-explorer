@@ -17,9 +17,11 @@ class MetricsError(ValueError):
 
 MEASURE_COLUMNS = (
     "gdp_per_capita_constant_2015_usd",
+    "gdp_per_capita_growth_annual_pct",
     "life_expectancy_years",
     "unemployment_total_pct",
     "population_total",
+    "secondary_enrollment_gross_pct",
 )
 
 HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN = (
@@ -109,6 +111,9 @@ def calculate_country_progress(
             "gdp_per_capita_start": start_values["gdp_per_capita_constant_2015_usd"],
             "gdp_per_capita_end": end_values["gdp_per_capita_constant_2015_usd"],
             "gdp_per_capita_change_pct": percentage_change(start_values["gdp_per_capita_constant_2015_usd"], end_values["gdp_per_capita_constant_2015_usd"]),
+            "gdp_per_capita_growth_start_pct": start_values["gdp_per_capita_growth_annual_pct"],
+            "gdp_per_capita_growth_end_pct": end_values["gdp_per_capita_growth_annual_pct"],
+            "gdp_per_capita_growth_change_pp": difference(start_values["gdp_per_capita_growth_annual_pct"], end_values["gdp_per_capita_growth_annual_pct"]),
             "life_expectancy_start": start_values["life_expectancy_years"],
             "life_expectancy_end": end_values["life_expectancy_years"],
             "life_expectancy_change_years": difference(start_values["life_expectancy_years"], end_values["life_expectancy_years"]),
@@ -118,6 +123,9 @@ def calculate_country_progress(
             "population_start": start_values["population_total"],
             "population_end": end_values["population_total"],
             "population_change_pct": percentage_change(start_values["population_total"], end_values["population_total"]),
+            "secondary_enrollment_start_pct": start_values["secondary_enrollment_gross_pct"],
+            "secondary_enrollment_end_pct": end_values["secondary_enrollment_gross_pct"],
+            "secondary_enrollment_change_pp": difference(start_values["secondary_enrollment_gross_pct"], end_values["secondary_enrollment_gross_pct"]),
         }
         row["core_metrics_available"] = all(
             row[field] is not None
@@ -168,9 +176,11 @@ def calculate_country_progress(
     definitions = {
         "period": {"start_year": start_year, "end_year": end_year},
         "gdp_per_capita_change_pct": "Percent change in GDP per capita at constant 2015 US dollars.",
+        "gdp_per_capita_growth_change_pp": "End-year GDP per capita annual growth rate minus start-year rate, in percentage points.",
         "life_expectancy_change_years": "End-year life expectancy minus start-year life expectancy, in years.",
         "unemployment_change_pp": "End-year unemployment rate minus start-year unemployment rate, in percentage points.",
         "population_change_pct": "Percent change in total population.",
+        "secondary_enrollment_change_pp": "End-year gross secondary-enrolment rate minus start-year rate, in percentage points.",
         HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN: {
             "gdp_threshold": high_gdp_threshold,
             "life_expectancy_threshold": low_life_threshold,
@@ -179,7 +189,7 @@ def calculate_country_progress(
         GDP_PER_CAPITA_INCREASE_WITH_UNEMPLOYMENT_INCREASE: {
             "description": "GDP per capita increased while unemployment also increased over the selected period."
         },
-        "limitation": "Signals prioritize research questions; they do not establish causality, forecast outcomes, rate countries, or provide investment advice.",
+        "limitation": "Signals prioritize research questions. They do not establish causality, forecast outcomes, rate countries, or provide investment advice.",
     }
     summary = {
         "period": {"start_year": start_year, "end_year": end_year},

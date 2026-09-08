@@ -14,16 +14,28 @@ from src.settings import processed_data_root
 SIGNAL_DISPLAY_NAMES = {
     "high_gdp_per_capita_change_low_life_expectancy_gain": "High GDP-per-capita change + low life-expectancy gain",
     "gdp_per_capita_increase_with_unemployment_increase": "GDP-per-capita increase + unemployment increase",
-    "insufficient_core_data": "Missing core data",
+    "insufficient_core_data": "Some core data unavailable",
     "none": "None",
 }
 
 SUMMARY_SIGNAL_DISPLAY_NAMES = {
     "high_gdp_per_capita_change_low_life_expectancy_gain": "High GDP change + low life gain",
     "gdp_per_capita_increase_with_unemployment_increase": "GDP up + unemployment up",
-    "insufficient_core_data": "Missing core data",
+    "insufficient_core_data": "Some core data unavailable",
     "none": "No research signal",
 }
+
+
+def core_data_status(row: dict[str, Any]) -> str:
+    """Explain endpoint availability without making a missing value look like zero."""
+    missing = [
+        item.strip()
+        for item in str(row.get("missing_core_metrics", "")).split(";")
+        if item.strip()
+    ]
+    if not missing:
+        return "All core data available"
+    return f"Missing: {', '.join(missing)}"
 
 
 class DashboardDataError(ValueError):
@@ -50,6 +62,8 @@ def latest_run_directory() -> Path:
 
 def load_dashboard_data() -> dict[str, Any]:
     """Load the latest output without changing data or calling the API."""
+    pointer_path = processed_data_root() / "latest_run.json"
+    pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
     run_directory = latest_run_directory()
     progress_files = sorted(run_directory.glob("country_progress_*.csv"))
     summary_files = sorted(run_directory.glob("metrics_summary_*.json"))
@@ -65,7 +79,28 @@ def load_dashboard_data() -> dict[str, Any]:
         "metric_definitions": json.loads(
             next(run_directory.glob("metric_definitions_*.json")).read_text(encoding="utf-8")
         ),
+        "country_iso2_codes": country_iso2_codes(Path(pointer["raw_run_directory"]))
+        if pointer.get("raw_run_directory")
+        else {},
     }
+
+
+def country_iso2_codes(raw_run_directory: Path) -> dict[str, str]:
+    """Read ISO-2 codes from the saved World Bank country metadata for display only."""
+    countries_directory = raw_run_directory / "countries"
+    if not countries_directory.exists():
+        return {}
+    result: dict[str, str] = {}
+    for page_path in countries_directory.glob("page_*.json"):
+        payload = json.loads(page_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, list) or len(payload) != 2 or not isinstance(payload[1], list):
+            continue
+        for record in payload[1]:
+            iso3_code = record.get("id")
+            iso2_code = record.get("iso2Code")
+            if isinstance(iso3_code, str) and isinstance(iso2_code, str) and len(iso2_code) == 2:
+                result[iso3_code] = iso2_code.upper()
+    return result
 
 
 def as_float(value: str | float | int | None) -> float | None:
@@ -85,7 +120,7 @@ def display_progress_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "Life expectancy change (years)": rounded_value(row["life_expectancy_change_years"]),
                 "Unemployment change (pp)": rounded_value(row["unemployment_change_pp"]),
                 "Population change (%)": rounded_value(row["population_change_pct"]),
-                "Research signals": "; ".join(
+                "Research signals": ", ".join(
                     SIGNAL_DISPLAY_NAMES.get(signal, signal)
                     for signal in str(row["research_signals"]).split(";")
                 ),
@@ -101,16 +136,79 @@ def display_summary_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     for row in rows:
         signals = str(row["research_signals"]).split(";")
+        descriptive_signals = [
+            signal for signal in signals if signal not in {"none", "insufficient_core_data"}
+        ]
         result.append(
             {
                 "Country": row["country_name"],
                 "World Bank region": row["region_name"].strip(),
                 "GDP per capita change (%)": rounded_value(row["gdp_per_capita_change_pct"]),
                 "Life expectancy change (years)": rounded_value(row["life_expectancy_change_years"]),
-                "Research focus": "; ".join(
-                    SUMMARY_SIGNAL_DISPLAY_NAMES.get(signal, signal) for signal in signals
-                ),
-                "Data availability": row.get("missing_core_metrics", "") or "Complete core data",
+                "Research signal(s)": ", ".join(
+                    SUMMARY_SIGNAL_DISPLAY_NAMES.get(signal, signal) for signal in descriptive_signals
+                ) or "No descriptive signal",
+                "Core-data status": core_data_status(row),
+            }
+        )
+    return result
+
+
+def display_all_comparison_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Prepare the full reference table, including supplementary context measures.
+
+    Supplementary measures stay out of signal logic, but remain visible so an
+    analyst can inspect the complete locally modelled country-period record.
+    """
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        signals = str(row["research_signals"]).split(";")
+        descriptive_signals = [
+            signal for signal in signals if signal not in {"none", "insufficient_core_data"}
+        ]
+        result.append(
+            {
+                "Country": row["country_name"],
+                "World Bank region": row["region_name"].strip(),
+                "Income group": row["income_level_name"],
+                "GDP per capita change (%)": rounded_value(row["gdp_per_capita_change_pct"]),
+                "GDP growth change (pp)": rounded_value(row.get("gdp_per_capita_growth_change_pp")),
+                "Life expectancy change (years)": rounded_value(row["life_expectancy_change_years"]),
+                "Unemployment change (pp)": rounded_value(row["unemployment_change_pp"]),
+                "Population change (%)": rounded_value(row["population_change_pct"]),
+                "Secondary enrolment change (pp)": rounded_value(row.get("secondary_enrollment_change_pp")),
+                "Research signal(s)": ", ".join(
+                    SIGNAL_DISPLAY_NAMES.get(signal, signal) for signal in descriptive_signals
+                ) or "No descriptive signal",
+                "Core-data status": core_data_status(row),
+            }
+        )
+    return result
+
+
+def display_missing_core_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Prepare the data-quality view around the four measures used by the product.
+
+    This deliberately omits the two supplementary context measures.  When the
+    user is investigating an unavailable core comparison, the useful question
+    is which of the required endpoint measures is missing, not whether an
+    unrelated context series happens to be available.
+    """
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        missing_measures = ", ".join(
+            item.strip() for item in str(row.get("missing_core_metrics") or "").split(";") if item.strip()
+        ) or "Not specified"
+        result.append(
+            {
+                "Country": row["country_name"],
+                "World Bank region": row["region_name"].strip(),
+                "Income group": row["income_level_name"],
+                "GDP per capita change (%)": rounded_value(row["gdp_per_capita_change_pct"]),
+                "Life expectancy change (years)": rounded_value(row["life_expectancy_change_years"]),
+                "Unemployment change (pp)": rounded_value(row["unemployment_change_pp"]),
+                "Population change (%)": rounded_value(row["population_change_pct"]),
+                "Missing core measure(s)": missing_measures,
             }
         )
     return result
@@ -200,6 +298,16 @@ def peer_comparison(
         "peer_count": len(peers),
         "member_names": sorted(
             str(row.get("country_name") or row["country_code"]) for row in peers
+        ),
+        "members": sorted(
+            (
+                {
+                    "country_code": str(row["country_code"]),
+                    "country_name": str(row.get("country_name") or row["country_code"]),
+                }
+                for row in peers
+            ),
+            key=lambda row: row["country_name"],
         ),
         "metrics": metrics,
     }

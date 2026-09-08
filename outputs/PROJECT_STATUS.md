@@ -74,5 +74,5 @@ pagination, שמירת כל עמוד raw data, manifest של הריצה, ו־sta
 
 ## היסטוריית Git נוכחית
 
-- `f04b93a` — יצירת spike שחזורי ל־World Bank API.
-- `8cc677c` — שמירת דגימות raw ותוצאות ההיתכנות שנמדדו.
+- `f04b93a` - יצירת spike שחזורי ל-World Bank API.
+- `8cc677c` - שמירת דגימות raw ותוצאות ההיתכנות שנמדדו.

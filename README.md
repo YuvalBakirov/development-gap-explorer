@@ -1,9 +1,8 @@
 # Development Gap Explorer
 
-Development Gap Explorer is a small Python data product for development and
-policy analysts. It combines economic and social indicators from the World
-Bank to help analysts identify countries or economies that warrant further
-research.
+Development Gap Explorer compares economic and social progress across
+countries over time. It combines World Bank indicators to help development and
+policy analysts identify countries or economies that warrant further research.
 
 The product is descriptive. It does not provide investment advice, forecast
 outcomes, assign country ratings, or establish that one indicator caused
@@ -11,26 +10,28 @@ another to change.
 
 ## What the dashboard answers
 
-For the initial period, 2010–2024, the dashboard lets an analyst:
+For the initial period, 2010-2024, the dashboard lets an analyst:
 
 - compare country-level changes in GDP per capita, life expectancy,
-  unemployment, and population;
-- filter the comparison by region, income group, and transparent research
-  signals;
+  unemployment, and population.
+- filter the comparison by region and income group.
 - start with a concise research shortlist, then switch to the complete country
-  reference table when needed;
+  reference table when needed.
 - choose an analysis period from the locally stored annual data, without a new
-  API request;
+  API request.
 - select one country or economy (Israel is the default when it is in scope) and
-  inspect its annual time series;
+  inspect its annual time series.
 - compare the selected country with the median of a clearly named comparison
   group: similar income level or the World Bank's broad regional classification,
-  with its other member countries available in an expandable list;
+  with its other member countries available in an expandable list.
 - use a GDP-per-capita and life-expectancy scatter plot to explore patterns and
-  outliers;
+  outliers.
 - inspect annual GDP-per-capita growth and secondary enrolment as supplementary
-  context, without treating their lower-coverage values as core signals;
-- switch between dark and light presentation modes;
+  context, without treating their lower-coverage values as core signals.
+- use the **All country comparisons** view as the full reference table: it
+  shows period changes for all six indicators, while clearly keeping the two
+  supplementary measures outside research-signal logic.
+- switch between dark and light presentation modes.
 - see data quality and missing-value information before interpreting a result.
 
 The dashboard treats a signal as a prompt for research, not a conclusion. For
@@ -49,9 +50,16 @@ Data source: **World Bank, World Development Indicators (WDI)**, retrieved
 through the World Bank Indicators API. WDI is listed by the World Bank Data
 Catalog as [Creative Commons Attribution 4.0 (CC BY 4.0)](https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators).
 This project preserves the raw API responses and creates derived, descriptive
-calculations; it does not imply World Bank endorsement. The source values,
+calculations. It does not imply World Bank endorsement. The source values,
 metadata, and any applicable indicator-specific terms remain those of the
 World Bank and its data providers.
+
+### Visual asset attribution
+
+The locally bundled country-flag SVGs in `assets/flags/` are derived from
+[flag-icons](https://github.com/lipis/flag-icons), version 7.3.2, under its
+[MIT License](https://github.com/lipis/flag-icons/blob/v7.3.2/LICENSE). They
+are visual aids only and are not World Bank data.
 
 | Indicator | World Bank code | Role |
 | --- | --- | --- |
@@ -155,8 +163,10 @@ column for each indicator. The initial full run contains 3,255 rows: 217
 countries/economies × 15 years.
 
 The metrics layer writes `country_progress_2010_2024.csv`. It contains each
-country’s start value, end value, change over the period, whether all core
-comparisons are available, and transparent research signals.
+country’s start value, end value, and change over the period for all six
+indicators. GDP per capita, life expectancy, unemployment, and population are
+the four core measures used for data-completeness status and research signals.
+GDP growth and secondary enrolment are supplementary context measures only.
 
 See [`outputs/data_dictionary.md`](outputs/data_dictionary.md) for the fields
 used in the raw, country-year, and country-progress layers.
@@ -166,11 +176,11 @@ used in the raw, country-year, and country-progress layers.
 The pipeline checks that:
 
 - API responses use the expected JSON envelope and all reported pages are
-  retrieved;
-- the country-year key is unique;
-- aggregate entities do not enter the country analysis;
-- identifiers map to the country metadata;
-- numeric values are valid for their indicator;
+  retrieved.
+- the country-year key is unique.
+- aggregate entities do not enter the country analysis.
+- identifiers map to the country metadata.
+- numeric values are valid for their indicator.
 - missing values stay missing rather than becoming zero.
 
 An invalid numeric observation is quarantined in the quality report, retained
@@ -199,7 +209,7 @@ reports are in `outputs/etl_run_validation_report.md` and
 - Country/economy labels follow World Bank metadata.
 - The optional secondary-enrollment series has materially lower coverage, so it
   is retained but excluded from the core comparison signals.
-- The default dashboard window is 2010–2024. Its research-signal thresholds are
+- The default dashboard window is 2010-2024. Its research-signal thresholds are
   calculated from observed countries in that window and documented in the
   processed metric-definitions file.
 
@@ -207,7 +217,7 @@ reports are in `outputs/etl_run_validation_report.md` and
 
 - A World Bank entity classified as a country/economy is appropriate for the
   comparison population. Aggregate groups are excluded.
-- Start-to-end changes over 2010–2024 are useful descriptive summaries, while
+- Start-to-end changes over 2010-2024 are useful descriptive summaries, while
   the country view retains annual observations for further inspection.
 - The research signals are intentionally transparent, simple screening rules.
   They are not risk scores or a ranking of country performance.
@@ -242,5 +252,5 @@ reports are in `outputs/etl_run_validation_report.md` and
 
 AI assistance was used for planning, implementation, documentation, and review.
 The available conversation handoff is preserved in `ai_transcript/`. Before
-submission, add the complete AI transcript required by the assignment; the
+submission, add the complete AI transcript required by the assignment, and the
 current files explicitly distinguish the bounded handoff from a full transcript.

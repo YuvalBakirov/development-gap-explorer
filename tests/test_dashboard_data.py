@@ -6,7 +6,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 from src.dashboard_data import (
+    core_data_status,
     country_trend_rows,
+    display_all_comparison_rows,
+    display_missing_core_rows,
     display_progress_rows,
     display_summary_rows,
     load_dashboard_data,
@@ -15,6 +18,26 @@ from src.dashboard_data import (
 
 
 class DashboardDataTests(unittest.TestCase):
+    def test_core_data_status_is_explicit_about_completeness_and_missing_values(self):
+        self.assertEqual(core_data_status({"missing_core_metrics": ""}), "All core data available")
+        self.assertEqual(
+            core_data_status({"missing_core_metrics": "GDP per capita;Unemployment"}),
+            "Missing: GDP per capita, Unemployment",
+        )
+
+    def test_summary_keeps_data_quality_separate_from_research_signals(self):
+        row = {
+            "country_name": "Exampleland",
+            "region_name": "Example region",
+            "gdp_per_capita_change_pct": "",
+            "life_expectancy_change_years": "1.0",
+            "research_signals": "insufficient_core_data",
+            "missing_core_metrics": "GDP per capita",
+        }
+        result = display_summary_rows([row])[0]
+        self.assertEqual(result["Research signal(s)"], "No descriptive signal")
+        self.assertEqual(result["Core-data status"], "Missing: GDP per capita")
+
     def test_display_progress_rows_converts_numbers_and_labels(self):
         result = display_progress_rows(
             [{
@@ -61,12 +84,52 @@ class DashboardDataTests(unittest.TestCase):
                 "World Bank region",
                 "GDP per capita change (%)",
                 "Life expectancy change (years)",
-                "Research focus",
-                "Data availability",
+                "Research signal(s)",
+                "Core-data status",
             ],
         )
-        self.assertEqual(result[0]["Research focus"], "GDP up + unemployment up")
-        self.assertEqual(result[0]["Data availability"], "Complete core data")
+        self.assertEqual(result[0]["Research signal(s)"], "GDP up + unemployment up")
+        self.assertEqual(result[0]["Core-data status"], "All core data available")
+
+    def test_all_comparisons_include_core_and_supplementary_changes(self):
+        result = display_all_comparison_rows(
+            [{
+                "country_name": "Example",
+                "region_name": " Region ",
+                "income_level_name": "High income",
+                "gdp_per_capita_change_pct": "12.5",
+                "gdp_per_capita_growth_change_pp": "-1.25",
+                "life_expectancy_change_years": "1.2",
+                "unemployment_change_pp": "",
+                "population_change_pct": "3.0",
+                "secondary_enrollment_change_pp": "2.5",
+                "research_signals": "none",
+                "missing_core_metrics": "Unemployment",
+            }]
+        )[0]
+        self.assertEqual(result["GDP growth change (pp)"], -1.25)
+        self.assertEqual(result["Secondary enrolment change (pp)"], 2.5)
+        self.assertIsNone(result["Unemployment change (pp)"])
+        self.assertEqual(result["Research signal(s)"], "No descriptive signal")
+
+    def test_missing_core_view_excludes_context_measures_and_names_missing_measure(self):
+        result = display_missing_core_rows(
+            [{
+                "country_name": "Example",
+                "region_name": " Region ",
+                "income_level_name": "High income",
+                "gdp_per_capita_change_pct": "12.5",
+                "life_expectancy_change_years": "1.2",
+                "unemployment_change_pp": "",
+                "population_change_pct": "3.0",
+                "gdp_per_capita_growth_change_pp": "-1.25",
+                "secondary_enrollment_change_pp": "2.5",
+                "missing_core_metrics": "Unemployment;GDP per capita",
+            }]
+        )[0]
+        self.assertEqual(result["Missing core measure(s)"], "Unemployment, GDP per capita")
+        self.assertNotIn("GDP growth change (pp)", result)
+        self.assertNotIn("Secondary enrolment change (pp)", result)
 
     def test_load_dashboard_data_uses_latest_run(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -99,6 +162,13 @@ class DashboardDataTests(unittest.TestCase):
         self.assertEqual(result["metrics"][0]["Peer median"], 20.0)
         self.assertEqual(result["metrics"][0]["Difference from peer median"], 0.0)
         self.assertEqual(result["member_names"], ["Beta", "Gamma"])
+        self.assertEqual(
+            result["members"],
+            [
+                {"country_code": "BBB", "country_name": "Beta"},
+                {"country_code": "CCC", "country_name": "Gamma"},
+            ],
+        )
 
 
 if __name__ == "__main__":
