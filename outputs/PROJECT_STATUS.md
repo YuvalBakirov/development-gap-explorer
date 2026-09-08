@@ -17,6 +17,8 @@ AI transcript material, and Git history.
 - The metrics layer identified 173 complete core comparisons, 9 GDP and life
   expectancy research signals, and 48 GDP and unemployment research signals.
 - All 22 automated tests passed on 2026-09-08.
+- GitHub Actions runs the unit-test suite in a fresh Python 3.11 environment
+  for each push and pull request.
 
 ## Deliberate scope
 

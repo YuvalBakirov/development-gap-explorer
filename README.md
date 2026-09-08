@@ -149,6 +149,13 @@ Run automated tests with:
 python -m unittest discover -s tests -v
 ```
 
+## Continuous test check
+
+GitHub Actions runs the same test command on every push and pull request with
+Python 3.11. The workflow installs `requirements.txt` in a fresh environment.
+It does not call the live World Bank API, write project data, or require any
+credentials. Local execution remains the submission path described above.
+
 ## Processed data model
 
 The main analytical table is:
