@@ -98,9 +98,31 @@ Python 3.10 or later is recommended. Use a project virtual environment rather
 than the global Anaconda `base` environment, so this project cannot change the
 dependencies of unrelated tools.
 
-```powershell
+After cloning the repository, run the following commands from its folder.
+Replace `<repository-url>` and `<repository-folder>` with the submission
+repository's URL and folder name.
+
+```text
+git clone <repository-url>
+cd <repository-folder>
 python -m venv .venv
+```
+
+Activate the environment:
+
+```powershell
+# Windows PowerShell
 .\.venv\Scripts\Activate.ps1
+```
+
+```bash
+# macOS / Linux
+source .venv/bin/activate
+```
+
+Then install and run the product:
+
+```text
 python -m pip install -r requirements.txt
 python etl.py
 streamlit run app.py
@@ -159,7 +181,7 @@ observations exceeds 1% of country-year-indicator observations (with a minimum
 tolerance of five records), or if structural checks such as unmapped entities
 fail.
 
-The successful 2026-09-07 run created 3,255 country-year rows with no duplicate
+The successful 2026-09-08 run created 3,255 country-year rows with no duplicate
 keys, no unmapped entities, and no invalid values. It completed with missing
 values, which is expected for some World Bank series. The dashboard exposes the
 missing-observation counts so users can interpret comparisons responsibly.
