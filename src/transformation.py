@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from src.extraction import is_country_or_economy, write_json_atomic
-from src.settings import END_YEAR, INDICATORS, START_YEAR
+from src.settings import END_YEAR, INDICATORS, MAX_QUARANTINED_RECORD_SHARE, START_YEAR
 
 
 def write_csv_atomic(path: Path, rows: Iterable[dict[str, Any]], fieldnames: list[str]) -> None:
@@ -57,7 +57,9 @@ def _is_valid_value(indicator_code: str, value: float | int) -> bool:
     return True
 
 
-def transform_raw_run(raw_run_directory: Path, processed_root: Path) -> dict[str, Any]:
+def transform_raw_run(
+    raw_run_directory: Path, processed_root: Path, publish_latest: bool = True
+) -> dict[str, Any]:
     """Create a wide country-year table and a transparent data-quality report."""
     manifest_path = raw_run_directory / "manifest.json"
     if not manifest_path.exists():
@@ -91,14 +93,16 @@ def transform_raw_run(raw_run_directory: Path, processed_root: Path) -> dict[str
         "aggregate_count": len(country_records) - len(countries),
         "expected_country_year_rows": len(rows_by_key),
         "duplicate_country_year_indicator_keys": [],
+        "exact_duplicate_records": [],
+        "conflicting_duplicate_records": [],
         "unmapped_entity_ids": [],
-        "invalid_value_records": [],
+        "quarantined_invalid_records": [],
         "aggregate_observations_skipped": 0,
         "missing_observations_by_indicator": {},
     }
 
     for indicator in INDICATORS:
-        seen_keys: set[tuple[str, int]] = set()
+        observed_values: dict[tuple[str, int], Any] = {}
         for payload in read_api_pages(raw_run_directory / "indicators" / indicator.code):
             for record in payload[1]:
                 observed_indicator = (record.get("indicator") or {}).get("id")
@@ -123,23 +127,52 @@ def transform_raw_run(raw_run_directory: Path, processed_root: Path) -> dict[str
                 if not START_YEAR <= year <= END_YEAR:
                     raise ValueError(f"Out-of-scope year for {indicator.code}: {year}")
                 key = (country_code, year)
-                if key in seen_keys:
-                    quality["duplicate_country_year_indicator_keys"].append(
-                        {"indicator": indicator.code, "country_code": country_code, "year": year}
-                    )
-                    continue
-                seen_keys.add(key)
-
                 value = record.get("value")
+                if key in observed_values:
+                    original_value = observed_values[key]
+                    if value == original_value:
+                        quality["exact_duplicate_records"].append(
+                            {
+                                "indicator": indicator.code,
+                                "country_code": country_code,
+                                "year": year,
+                                "value": value,
+                            }
+                        )
+                    else:
+                        quality["conflicting_duplicate_records"].append(
+                            {
+                                "indicator": indicator.code,
+                                "country_code": country_code,
+                                "year": year,
+                                "first_value": original_value,
+                                "conflicting_value": value,
+                            }
+                        )
+                        rows_by_key[key][indicator.column_name] = None
+                    continue
+                observed_values[key] = value
                 if value is not None:
                     if not isinstance(value, (int, float)) or isinstance(value, bool):
-                        quality["invalid_value_records"].append(
-                            {"indicator": indicator.code, "country_code": country_code, "year": year, "value": value}
+                        quality["quarantined_invalid_records"].append(
+                            {
+                                "indicator": indicator.code,
+                                "country_code": country_code,
+                                "year": year,
+                                "value": value,
+                                "reason": "Value is not numeric",
+                            }
                         )
                         continue
                     if not _is_valid_value(indicator.code, value):
-                        quality["invalid_value_records"].append(
-                            {"indicator": indicator.code, "country_code": country_code, "year": year, "value": value}
+                        quality["quarantined_invalid_records"].append(
+                            {
+                                "indicator": indicator.code,
+                                "country_code": country_code,
+                                "year": year,
+                                "value": value,
+                                "reason": "Value is outside the indicator's valid range",
+                            }
                         )
                         continue
                     rows_by_key[key][indicator.column_name] = value
@@ -148,14 +181,27 @@ def transform_raw_run(raw_run_directory: Path, processed_root: Path) -> dict[str
             1 for row in rows_by_key.values() if row[indicator.column_name] is None
         )
 
-    if quality["duplicate_country_year_indicator_keys"]:
-        raise ValueError("Duplicate country-year-indicator keys found in raw data")
     if quality["unmapped_entity_ids"]:
         raise ValueError("Unmapped entity IDs found in raw data")
-    if quality["invalid_value_records"]:
-        raise ValueError("Invalid indicator values found in raw data")
+    quarantined_count = len(quality["quarantined_invalid_records"]) + len(
+        quality["conflicting_duplicate_records"]
+    )
+    maximum_quarantined_records = max(
+        5, int(len(rows_by_key) * len(INDICATORS) * MAX_QUARANTINED_RECORD_SHARE)
+    )
+    quality["quarantined_record_count"] = quarantined_count
+    quality["maximum_quarantined_records"] = maximum_quarantined_records
+    if quarantined_count > maximum_quarantined_records:
+        raise ValueError(
+            "Too many invalid or conflicting records were quarantined: "
+            f"{quarantined_count} exceeds {maximum_quarantined_records}"
+        )
 
-    quality["status"] = "passed_with_missing_values"
+    quality["status"] = (
+        "passed_with_quarantined_records"
+        if quarantined_count
+        else "passed_with_missing_values"
+    )
     fieldnames = [
         "country_code",
         "country_name",
@@ -184,5 +230,6 @@ def transform_raw_run(raw_run_directory: Path, processed_root: Path) -> dict[str
         "country_year_rows": len(ordered_rows),
         "quality_status": quality["status"],
     }
-    write_json_atomic(processed_root / "latest_run.json", summary)
+    if publish_latest:
+        write_json_atomic(processed_root / "latest_run.json", summary)
     return summary

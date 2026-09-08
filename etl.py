@@ -22,7 +22,7 @@ def main() -> int:
     try:
         manifest = extract_world_bank_raw_data(WorldBankClient(), raw_data_root())
         summary = transform_raw_run(
-            raw_data_root() / manifest["run_id"], processed_data_root()
+            raw_data_root() / manifest["run_id"], processed_data_root(), publish_latest=False
         )
         metrics_summary = build_country_progress(
             Path(summary["processed_run_directory"]) / "country_year.csv",
@@ -30,6 +30,7 @@ def main() -> int:
             manifest["period"]["start_year"],
             manifest["period"]["end_year"],
         )
+        write_json_atomic(processed_data_root() / "latest_run.json", summary)
     except (WorldBankApiError, OSError, ValueError) as exc:
         print(f"ETL extraction failed: {exc}", file=sys.stderr)
         return 1

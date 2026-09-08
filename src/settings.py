@@ -21,6 +21,7 @@ WORLD_BANK_BASE_URL = "https://api.worldbank.org/v2"
 PAGE_SIZE = 1_000
 REQUEST_TIMEOUT_SECONDS = 45
 MAX_RETRIES = 3
+MAX_QUARANTINED_RECORD_SHARE = 0.01
 
 INDICATORS = (
     Indicator(
@@ -72,4 +73,3 @@ def raw_data_root() -> Path:
 
 def processed_data_root() -> Path:
     return repository_root() / "data" / "processed"
-

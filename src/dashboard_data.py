@@ -5,16 +5,24 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 from src.settings import processed_data_root
 
 
 SIGNAL_DISPLAY_NAMES = {
-    "high_gdp_growth_low_life_expectancy_gain": "GDP growth + low life-expectancy gain",
-    "gdp_growth_with_unemployment_increase": "GDP growth + unemployment increase",
+    "high_gdp_per_capita_change_low_life_expectancy_gain": "High GDP-per-capita change + low life-expectancy gain",
+    "gdp_per_capita_increase_with_unemployment_increase": "GDP-per-capita increase + unemployment increase",
     "insufficient_core_data": "Missing core data",
     "none": "None",
+}
+
+SUMMARY_SIGNAL_DISPLAY_NAMES = {
+    "high_gdp_per_capita_change_low_life_expectancy_gain": "High GDP change + low life gain",
+    "gdp_per_capita_increase_with_unemployment_increase": "GDP up + unemployment up",
+    "insufficient_core_data": "Missing core data",
+    "none": "No research signal",
 }
 
 
@@ -60,11 +68,11 @@ def load_dashboard_data() -> dict[str, Any]:
     }
 
 
-def as_float(value: str | None) -> float | None:
+def as_float(value: str | float | int | None) -> float | None:
     return None if value in {None, ""} else float(value)
 
 
-def display_progress_rows(rows: list[dict[str, str]]) -> list[dict[str, Any]]:
+def display_progress_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Convert compact processed fields into labels and numbers for display."""
     result: list[dict[str, Any]] = []
     for row in rows:
@@ -79,14 +87,36 @@ def display_progress_rows(rows: list[dict[str, str]]) -> list[dict[str, Any]]:
                 "Population change (%)": rounded_value(row["population_change_pct"]),
                 "Research signals": "; ".join(
                     SIGNAL_DISPLAY_NAMES.get(signal, signal)
-                    for signal in row["research_signals"].split(";")
+                    for signal in str(row["research_signals"]).split(";")
                 ),
+                "Why flagged": row.get("research_signal_explanation", ""),
+                "Missing core metrics": row.get("missing_core_metrics", ""),
             }
         )
     return result
 
 
-def rounded_value(value: str | None) -> float | None:
+def display_summary_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Prepare a compact, first-screen country summary without hiding source metrics."""
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        signals = str(row["research_signals"]).split(";")
+        result.append(
+            {
+                "Country": row["country_name"],
+                "World Bank region": row["region_name"].strip(),
+                "GDP per capita change (%)": rounded_value(row["gdp_per_capita_change_pct"]),
+                "Life expectancy change (years)": rounded_value(row["life_expectancy_change_years"]),
+                "Research focus": "; ".join(
+                    SUMMARY_SIGNAL_DISPLAY_NAMES.get(signal, signal) for signal in signals
+                ),
+                "Data availability": row.get("missing_core_metrics", "") or "Complete core data",
+            }
+        )
+    return result
+
+
+def rounded_value(value: str | float | int | None) -> float | None:
     numeric_value = as_float(value)
     return None if numeric_value is None else round(numeric_value, 2)
 
@@ -97,13 +127,79 @@ def country_trend_rows(
     """Return a selected country's annual observations in chronological order."""
     measures = (
         "gdp_per_capita_constant_2015_usd",
+        "gdp_per_capita_growth_annual_pct",
         "life_expectancy_years",
         "unemployment_total_pct",
         "population_total",
+        "secondary_enrollment_gross_pct",
     )
     result = []
     for row in country_year_rows:
         if row["country_code"] != country_code:
             continue
-        result.append({"year": int(row["year"]), **{measure: as_float(row[measure]) for measure in measures}})
+        result.append(
+            {
+                "year": int(row["year"]),
+                **{measure: as_float(row.get(measure)) for measure in measures},
+            }
+        )
     return sorted(result, key=lambda row: row["year"])
+
+
+def peer_comparison(
+    progress_rows: list[dict[str, Any]], selected_country_code: str, grouping: str
+) -> dict[str, Any]:
+    """Compare a selected country with median changes in its chosen peer group."""
+    grouping_columns = {
+        "Income group": ("income_level_id", "income_level_name"),
+        "Region": ("region_id", "region_name"),
+    }
+    if grouping not in grouping_columns:
+        raise DashboardDataError(f"Unsupported peer grouping: {grouping}")
+    selected = next(
+        (row for row in progress_rows if row["country_code"] == selected_country_code),
+        None,
+    )
+    if selected is None:
+        raise DashboardDataError(f"Selected country is not in the comparison: {selected_country_code}")
+    group_id_column, group_name_column = grouping_columns[grouping]
+    peers = [
+        row
+        for row in progress_rows
+        if row["country_code"] != selected_country_code
+        and row[group_id_column] == selected[group_id_column]
+    ]
+    metric_labels = {
+        "gdp_per_capita_change_pct": "GDP per capita change (%)",
+        "life_expectancy_change_years": "Life expectancy change (years)",
+        "unemployment_change_pp": "Unemployment change (pp)",
+        "population_change_pct": "Population change (%)",
+    }
+    metrics = []
+    for field, label in metric_labels.items():
+        peer_values = [as_float(row.get(field)) for row in peers]
+        peer_values = [value for value in peer_values if value is not None]
+        selected_value = as_float(selected.get(field))
+        peer_median = median(peer_values) if peer_values else None
+        metrics.append(
+            {
+                "Metric": label,
+                "Selected country": rounded_value(selected_value),
+                "Peer median": rounded_value(peer_median),
+                "Difference from peer median": (
+                    rounded_value(selected_value - peer_median)
+                    if selected_value is not None and peer_median is not None
+                    else None
+                ),
+                "Peer observations": len(peer_values),
+            }
+        )
+    return {
+        "grouping": grouping,
+        "group_name": selected[group_name_column].strip(),
+        "peer_count": len(peers),
+        "member_names": sorted(
+            str(row.get("country_name") or row["country_code"]) for row in peers
+        ),
+        "metrics": metrics,
+    }

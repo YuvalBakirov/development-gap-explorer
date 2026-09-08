@@ -3,7 +3,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.metrics import MetricsError, build_country_progress, percentage_change
+from src.metrics import (
+    GDP_PER_CAPITA_INCREASE_WITH_UNEMPLOYMENT_INCREASE,
+    HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN,
+    MetricsError,
+    build_country_progress,
+    calculate_country_progress,
+    percentage_change,
+)
 
 
 FIELDS = [
@@ -46,10 +53,30 @@ class MetricsTests(unittest.TestCase):
             self.assertEqual(summary["countries_with_complete_core_metrics"], 3)
             with (root / "metrics" / "country_progress_2010_2024.csv").open(encoding="utf-8", newline="") as handle:
                 result = {item["country_code"]: item for item in csv.DictReader(handle)}
-            self.assertIn("high_gdp_growth_low_life_expectancy_gain", result["AAA"]["research_signals"])
-            self.assertIn("gdp_growth_with_unemployment_increase", result["AAA"]["research_signals"])
+            self.assertIn(HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN, result["AAA"]["research_signals"])
+            self.assertIn(GDP_PER_CAPITA_INCREASE_WITH_UNEMPLOYMENT_INCREASE, result["AAA"]["research_signals"])
             self.assertEqual(result["DDD"]["unemployment_change_pp"], "")
             self.assertIn("insufficient_core_data", result["DDD"]["research_signals"])
+            self.assertIn("Missing core metrics", result["DDD"]["research_signal_explanation"])
+
+    def test_metrics_can_recalculate_a_different_period_without_writing_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "country_year.csv"
+            with source.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=FIELDS)
+                writer.writeheader()
+                writer.writerows([
+                    row("AAA", 2015, 100, 70, 5, 1000),
+                    row("AAA", 2020, 125, 72, 4, 1100),
+                    row("BBB", 2015, 100, 70, 5, 1000),
+                    row("BBB", 2020, 110, 71, 5, 1100),
+                ])
+            progress_rows, definitions, summary = calculate_country_progress(source, 2015, 2020)
+            self.assertEqual(summary["period"], {"start_year": 2015, "end_year": 2020})
+            self.assertEqual(len(progress_rows), 2)
+            self.assertIn(HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN, definitions)
+            self.assertFalse((root / "country_progress_2015_2020.csv").exists())
 
     def test_metrics_reject_reverse_period(self) -> None:
         with self.assertRaises(MetricsError):

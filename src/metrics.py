@@ -22,6 +22,14 @@ MEASURE_COLUMNS = (
     "population_total",
 )
 
+HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN = (
+    "high_gdp_per_capita_change_low_life_expectancy_gain"
+)
+GDP_PER_CAPITA_INCREASE_WITH_UNEMPLOYMENT_INCREASE = (
+    "gdp_per_capita_increase_with_unemployment_increase"
+)
+INSUFFICIENT_CORE_DATA = "insufficient_core_data"
+
 
 def nullable_float(value: str | None) -> float | None:
     if value in {None, ""}:
@@ -76,10 +84,10 @@ def load_period_endpoints(
     return endpoints
 
 
-def build_country_progress(
-    country_year_path: Path, output_directory: Path, start_year: int, end_year: int
-) -> dict[str, Any]:
-    """Calculate period changes and transparent signals for research prioritization."""
+def calculate_country_progress(
+    country_year_path: Path, start_year: int, end_year: int
+) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
+    """Calculate descriptive period metrics without writing or mutating data."""
     endpoints = load_period_endpoints(country_year_path, start_year, end_year)
     progress_rows: list[dict[str, Any]] = []
     for country_code, period in sorted(endpoints.items()):
@@ -115,6 +123,16 @@ def build_country_progress(
             row[field] is not None
             for field in ("gdp_per_capita_change_pct", "life_expectancy_change_years", "unemployment_change_pp", "population_change_pct")
         )
+        row["missing_core_metrics"] = ";".join(
+            label
+            for field, label in (
+                ("gdp_per_capita_change_pct", "GDP per capita"),
+                ("life_expectancy_change_years", "Life expectancy"),
+                ("unemployment_change_pp", "Unemployment"),
+                ("population_change_pct", "Population"),
+            )
+            if row[field] is None
+        )
         progress_rows.append(row)
 
     gdp_changes = [row["gdp_per_capita_change_pct"] for row in progress_rows if row["gdp_per_capita_change_pct"] is not None]
@@ -123,38 +141,73 @@ def build_country_progress(
     low_life_threshold = nearest_rank(life_changes, 0.25)
     for row in progress_rows:
         signals: list[str] = []
+        explanations: list[str] = []
         if row["gdp_per_capita_change_pct"] is not None and row["life_expectancy_change_years"] is not None:
             if row["gdp_per_capita_change_pct"] >= high_gdp_threshold and row["life_expectancy_change_years"] <= low_life_threshold:
-                signals.append("high_gdp_growth_low_life_expectancy_gain")
+                signals.append(HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN)
+                explanations.append(
+                    f"GDP per capita change {row['gdp_per_capita_change_pct']:.2f}% "
+                    f">= {high_gdp_threshold:.2f}% and life-expectancy change "
+                    f"{row['life_expectancy_change_years']:.2f} <= {low_life_threshold:.2f} years"
+                )
         if row["gdp_per_capita_change_pct"] is not None and row["unemployment_change_pp"] is not None:
             if row["gdp_per_capita_change_pct"] > 0 and row["unemployment_change_pp"] > 0:
-                signals.append("gdp_growth_with_unemployment_increase")
+                signals.append(GDP_PER_CAPITA_INCREASE_WITH_UNEMPLOYMENT_INCREASE)
+                explanations.append(
+                    f"GDP per capita change {row['gdp_per_capita_change_pct']:.2f}% > 0 "
+                    f"and unemployment change {row['unemployment_change_pp']:.2f} percentage points > 0"
+                )
         if not row["core_metrics_available"]:
-            signals.append("insufficient_core_data")
+            signals.append(INSUFFICIENT_CORE_DATA)
+            explanations.append(f"Missing core metrics: {row['missing_core_metrics']}")
         row["research_signals"] = ";".join(signals) if signals else "none"
+        row["research_signal_explanation"] = " | ".join(explanations) if explanations else "No research signal was triggered."
 
     if not progress_rows:
         raise MetricsError("No countries found in the requested period")
-    output_directory.mkdir(parents=True, exist_ok=True)
-    output_path = output_directory / f"country_progress_{start_year}_{end_year}.csv"
-    write_csv_atomic(output_path, progress_rows, list(progress_rows[0]))
     definitions = {
         "period": {"start_year": start_year, "end_year": end_year},
         "gdp_per_capita_change_pct": "Percent change in GDP per capita at constant 2015 US dollars.",
         "life_expectancy_change_years": "End-year life expectancy minus start-year life expectancy, in years.",
         "unemployment_change_pp": "End-year unemployment rate minus start-year unemployment rate, in percentage points.",
         "population_change_pct": "Percent change in total population.",
-        "high_gdp_growth_low_life_expectancy_gain": {"gdp_threshold": high_gdp_threshold, "life_expectancy_threshold": low_life_threshold},
+        HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN: {
+            "gdp_threshold": high_gdp_threshold,
+            "life_expectancy_threshold": low_life_threshold,
+            "description": "GDP per capita change is in the observed upper quartile while life-expectancy change is in the observed lower quartile.",
+        },
+        GDP_PER_CAPITA_INCREASE_WITH_UNEMPLOYMENT_INCREASE: {
+            "description": "GDP per capita increased while unemployment also increased over the selected period."
+        },
         "limitation": "Signals prioritize research questions; they do not establish causality, forecast outcomes, rate countries, or provide investment advice.",
     }
     summary = {
         "period": {"start_year": start_year, "end_year": end_year},
         "country_count": len(progress_rows),
         "countries_with_complete_core_metrics": sum(1 for row in progress_rows if row["core_metrics_available"]),
-        "signal_counts": {signal: sum(signal in row["research_signals"].split(";") for row in progress_rows) for signal in ("high_gdp_growth_low_life_expectancy_gain", "gdp_growth_with_unemployment_increase", "insufficient_core_data")},
-        "output_file": str(output_path),
+        "signal_counts": {
+            signal: sum(signal in row["research_signals"].split(";") for row in progress_rows)
+            for signal in (
+                HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN,
+                GDP_PER_CAPITA_INCREASE_WITH_UNEMPLOYMENT_INCREASE,
+                INSUFFICIENT_CORE_DATA,
+            )
+        },
     }
+    return progress_rows, definitions, summary
+
+
+def build_country_progress(
+    country_year_path: Path, output_directory: Path, start_year: int, end_year: int
+) -> dict[str, Any]:
+    """Calculate metrics and persist a reproducible output for one period."""
+    progress_rows, definitions, summary = calculate_country_progress(
+        country_year_path, start_year, end_year
+    )
+    output_directory.mkdir(parents=True, exist_ok=True)
+    output_path = output_directory / f"country_progress_{start_year}_{end_year}.csv"
+    write_csv_atomic(output_path, progress_rows, list(progress_rows[0]))
+    summary["output_file"] = str(output_path)
     write_json_atomic(output_directory / f"metric_definitions_{start_year}_{end_year}.json", definitions)
     write_json_atomic(output_directory / f"metrics_summary_{start_year}_{end_year}.json", summary)
     return summary
-

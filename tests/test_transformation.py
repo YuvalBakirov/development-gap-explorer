@@ -77,6 +77,51 @@ class TransformationTests(unittest.TestCase):
             self.assertEqual(quality["aggregate_observations_skipped"], len(INDICATORS))
             self.assertEqual(quality["status"], "passed_with_missing_values")
 
+    def test_transform_quarantines_invalid_values_and_conflicting_duplicates(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            raw_run = root / "raw" / "run-test"
+            write_page(
+                raw_run / "countries",
+                [{
+                    "id": "USA", "name": "United States",
+                    "region": {"id": "NAC", "value": "North America"},
+                    "incomeLevel": {"id": "HIC", "value": "High income"},
+                }],
+            )
+            (raw_run / "manifest.json").write_text(json.dumps({"run_id": "run-test"}), encoding="utf-8")
+            values = {
+                "NY.GDP.PCAP.KD": 50000,
+                "NY.GDP.PCAP.KD.ZG": 2.0,
+                "SL.UEM.TOTL.ZS": 105.0,
+                "SP.DYN.LE00.IN": 79.0,
+                "SP.POP.TOTL": 300000000,
+                "SE.SEC.ENRR": 95.0,
+            }
+            for indicator in INDICATORS:
+                records = [{
+                    "indicator": {"id": indicator.code}, "countryiso3code": "USA",
+                    "date": "2010", "value": values[indicator.code],
+                }]
+                if indicator.code == "NY.GDP.PCAP.KD":
+                    records.append({
+                        "indicator": {"id": indicator.code}, "countryiso3code": "USA",
+                        "date": "2010", "value": 50001,
+                    })
+                write_page(raw_run / "indicators" / indicator.code, records)
+
+            summary = transform_raw_run(raw_run, root / "processed", publish_latest=False)
+            processed_run = Path(summary["processed_run_directory"])
+            quality = json.loads((processed_run / "data_quality_report.json").read_text())
+            self.assertEqual(quality["status"], "passed_with_quarantined_records")
+            self.assertEqual(len(quality["quarantined_invalid_records"]), 1)
+            self.assertEqual(len(quality["conflicting_duplicate_records"]), 1)
+            self.assertFalse((root / "processed" / "latest_run.json").exists())
+            with (processed_run / "country_year.csv").open(encoding="utf-8", newline="") as handle:
+                row = next(csv.DictReader(handle))
+            self.assertEqual(row["gdp_per_capita_constant_2015_usd"], "")
+            self.assertEqual(row["unemployment_total_pct"], "")
+
 
 if __name__ == "__main__":
     unittest.main()

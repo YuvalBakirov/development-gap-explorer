@@ -1,3 +1,5 @@
 # The extraction and transformation layers use Python's standard library.
 # Streamlit renders the business-facing dashboard.
 streamlit==1.30.0
+# Altair renders the interactive country comparison scatter plot.
+altair==5.0.1

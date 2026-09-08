@@ -17,11 +17,24 @@ For the initial period, 2010–2024, the dashboard lets an analyst:
   unemployment, and population;
 - filter the comparison by region, income group, and transparent research
   signals;
-- select one country or economy and inspect its annual time series;
+- start with a concise research shortlist, then switch to the complete country
+  reference table when needed;
+- choose an analysis period from the locally stored annual data, without a new
+  API request;
+- select one country or economy (Israel is the default when it is in scope) and
+  inspect its annual time series;
+- compare the selected country with the median of a clearly named comparison
+  group: similar income level or the World Bank's broad regional classification,
+  with its other member countries available in an expandable list;
+- use a GDP-per-capita and life-expectancy scatter plot to explore patterns and
+  outliers;
+- inspect annual GDP-per-capita growth and secondary enrolment as supplementary
+  context, without treating their lower-coverage values as core signals;
+- switch between dark and light presentation modes;
 - see data quality and missing-value information before interpreting a result.
 
 The dashboard treats a signal as a prompt for research, not a conclusion. For
-example, high GDP-per-capita growth paired with relatively low life-expectancy
+example, high GDP-per-capita change paired with relatively low life-expectancy
 improvement is a question worth investigating. It does not prove that growth
 failed to improve wellbeing, or explain why a pattern occurred.
 
@@ -29,6 +42,16 @@ failed to improve wellbeing, or explain why a pattern occurred.
 
 Source: [World Bank Indicators API](https://api.worldbank.org/v2/). No API key
 is required.
+
+### Data attribution and license
+
+Data source: **World Bank, World Development Indicators (WDI)**, retrieved
+through the World Bank Indicators API. WDI is listed by the World Bank Data
+Catalog as [Creative Commons Attribution 4.0 (CC BY 4.0)](https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators).
+This project preserves the raw API responses and creates derived, descriptive
+calculations; it does not imply World Bank endorsement. The source values,
+metadata, and any applicable indicator-specific terms remain those of the
+World Bank and its data providers.
 
 | Indicator | World Bank code | Role |
 | --- | --- | --- |
@@ -66,8 +89,8 @@ Streamlit dashboard             app.py
 
 Each extraction records complete API pages, pagination metadata, retrieval
 time, and a manifest. Transformations run in a staging directory before their
-output is promoted to a successful run. `data/processed/latest_run.json` points
-the dashboard to the most recent successful run.
+output is promoted to a successful run. `data/processed/latest_run.json` is
+updated only after the ETL's transformation and metrics steps both succeed.
 
 ## Local setup and run
 
@@ -113,6 +136,9 @@ The metrics layer writes `country_progress_2010_2024.csv`. It contains each
 country’s start value, end value, change over the period, whether all core
 comparisons are available, and transparent research signals.
 
+See [`outputs/data_dictionary.md`](outputs/data_dictionary.md) for the fields
+used in the raw, country-year, and country-progress layers.
+
 ## Data quality and validation
 
 The pipeline checks that:
@@ -124,6 +150,14 @@ The pipeline checks that:
 - identifiers map to the country metadata;
 - numeric values are valid for their indicator;
 - missing values stay missing rather than becoming zero.
+
+An invalid numeric observation is quarantined in the quality report, retained
+in raw data for investigation, and left missing in the analytical output. Exact
+duplicate records are retained once and reported. Conflicting duplicates are
+quarantined and left missing. The run fails if the number of quarantined
+observations exceeds 1% of country-year-indicator observations (with a minimum
+tolerance of five records), or if structural checks such as unmapped entities
+fail.
 
 The successful 2026-09-07 run created 3,255 country-year rows with no duplicate
 keys, no unmapped entities, and no invalid values. It completed with missing
@@ -160,15 +194,13 @@ reports are in `outputs/etl_run_validation_report.md` and
 
 ## What I would improve with more time
 
-- Let analysts choose a validated comparison window in the dashboard and
-  regenerate metrics for that window.
-- Add peer-group comparisons, such as countries in the same income group or
-  region, while preserving the distinction between descriptive comparison and
-  causal analysis.
+- Add peer-specific signal thresholds rather than using thresholds calculated
+  across all observed countries.
 - Add a scheduled refresh and historical run comparison to make data updates
   observable over time.
 - Add integration tests that run against a recorded API fixture and browser
   smoke tests for the Streamlit interface.
+- Add a documented workflow for reviewing and resolving quarantined records.
 
 ## Repository guide
 
