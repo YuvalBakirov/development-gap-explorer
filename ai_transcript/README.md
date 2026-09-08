@@ -1,11 +1,12 @@
 # AI conversation transcript
 
-The final submission must contain the full AI conversation transcript.
+This directory contains the complete user-visible AI interaction used for this assignment.
 
-This Work repository was created from a referenced ChatGPT conversation. The
-current environment exposed only a bounded preview of that earlier conversation,
-not the complete thread. The available handoff is preserved in
-`conversation_handoff.md`. Before final submission, the complete original
-conversation and the continuation in Work must be exported here. The handoff
-file must not be represented as the complete transcript.
+## Files
 
+- `chatgpt_planning_transcript.md` - initial assignment review, product direction, API selection, and ETL design.
+- `codex_work_transcript.md` - implementation, API feasibility testing, debugging, validation, dashboard improvement, and submission preparation.
+- `AI_USAGE_INDEX.md` - a short map from the assignment's AI requirements to the relevant transcript sections.
+- `conversation_handoff.md` - the original project handoff, retained as supporting context.
+
+The two files named `*_transcript.md` are the submission transcripts. They preserve user and assistant messages and record project actions. They do not include internal model reasoning or system instructions because those are not part of the visible conversation.
