@@ -251,6 +251,7 @@ reports are in `outputs/etl_run_validation_report.md` and
 ## AI assistance disclosure
 
 AI assistance was used for planning, implementation, documentation, and review.
-The available conversation handoff is preserved in `ai_transcript/`. Before
-submission, add the complete AI transcript required by the assignment, and the
-current files explicitly distinguish the bounded handoff from a full transcript.
+The complete user-visible transcripts are stored in `ai_transcript/`.
+`AI_USAGE_INDEX.md` maps the assignment's AI requirements to the relevant
+parts of those transcripts. The earlier `conversation_handoff.md` is retained
+as supporting context and is clearly labelled as a handoff, not as a transcript.

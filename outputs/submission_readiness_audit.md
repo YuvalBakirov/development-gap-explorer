@@ -12,21 +12,18 @@ Reviewed against `AI_Data_Engineer_Candidate_Assignment.docx` on 2026-09-08.
 | Analytics layer | transparent country progress metrics and research signals | Ready |
 | Interactive business-facing application | filters, comparison table, country trends, quality explanation | Ready |
 | README requirements | setup, architecture, data model, quality, assumptions, limits, AI use, future improvements | Ready |
-| Standard local run flow | clean-clone validation passed on 2026-09-08: new virtual environment, dependency installation, `python etl.py`, Streamlit startup, and 18 tests | Ready |
-| Git history | six meaningful commits through dashboard delivery | Ready |
-| Full AI transcript | only a bounded conversation handoff is currently present | Requires user-provided full transcript before submission |
+| Standard local run flow | documented in `README.md`, verified through dependency installation, a real `python etl.py` run, Streamlit startup, and automated tests | Ready |
+| Git history | meaningful commits cover implementation, testing, dashboard delivery, and transcript documentation | Ready |
+| Full AI transcript | `ai_transcript/chatgpt_planning_transcript.md`, `ai_transcript/codex_work_transcript.md`, and `AI_USAGE_INDEX.md` | Ready |
 
 ## Final pre-submission checks
 
-1. Add the full AI conversation transcript to `ai_transcript/`.
-2. Ensure the remote repository is accessible to the hiring team.
+1. Ensure the remote repository is accessible to the hiring team.
 
-## Clean-clone validation evidence
+## Latest validation evidence
 
-The committed project was cloned locally into an empty folder on 2026-09-08.
-Using a newly created Python virtual environment, `pip install -r
-requirements.txt` completed, `python etl.py` retrieved a new World Bank
-snapshot and produced 3,255 country-year rows for 217 countries/economies,
-and Streamlit started successfully. The same clean folder passed all 18 unit
-tests. This verifies that no manual data preparation, database, credential, or
-project-global package is required.
+On 2026-09-08, the project passed all 21 automated tests and `app.py`
+compiled successfully. A real `python etl.py` run retrieved a new World Bank
+snapshot and produced 3,255 country-year rows for 217 countries/economies.
+No manual data preparation, database, credential, or project-global package is
+required.
