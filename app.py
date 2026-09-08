@@ -13,7 +13,6 @@ from src.dashboard_data import (
     DashboardDataError,
     country_trend_rows,
     display_all_comparison_rows,
-    display_missing_core_rows,
     load_dashboard_data,
     peer_comparison,
 )
@@ -43,6 +42,12 @@ SIGNAL_LABELS = {
 SIGNAL_PLAIN_LANGUAGE = {
     HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN: "GDP per capita rose strongly while life expectancy gained relatively little.",
     GDP_PER_CAPITA_INCREASE_WITH_UNEMPLOYMENT_INCREASE: "GDP per capita and unemployment both increased.",
+}
+
+RESEARCH_SIGNAL_FILTERS = {
+    "All research signals": None,
+    "High GDP change and low life gain": HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN,
+    "GDP per capita and unemployment both increased": GDP_PER_CAPITA_INCREASE_WITH_UNEMPLOYMENT_INCREASE,
 }
 
 INDICATOR_LABELS = {
@@ -197,6 +202,7 @@ def apply_theme(appearance: str) -> dict[str, str]:
         .table-context-note {{ background: {palette['surface']}; color: {palette['text']};
           border-left: 3px solid {palette['line']}; border-radius: 0.35rem;
           padding: 0.48rem 0.65rem; margin: 0.65rem 0; font-size: 0.91rem; white-space: pre-line; }}
+        .after-table-space {{ height: 1.6rem; }}
         .disclaimer-star {{ color: #d64545; font-weight: 900; margin-right: 0.22rem; }}
         .country-flag-preview {{ margin-top: 1.6rem; text-align: center; }}
         .country-flag-preview img {{ width: 34px; height: 25px; object-fit: cover; border: 1px solid {palette['border']};
@@ -339,12 +345,56 @@ def format_table_value(value: object) -> tuple[str, bool]:
     return str(value), False
 
 
-def render_table(rows: list[dict[str, Any]], max_height: int = 410) -> None:
-    """Render a compact, theme-controlled table without Streamlit grid theme leakage."""
+def table_sort_value(value: object) -> float | str:
+    """Return a comparable value for a user-selected table column."""
+    if isinstance(value, bool):
+        return float(value)
+    if isinstance(value, (float, int)):
+        return float(value)
+    return str(value).casefold()
+
+
+def render_table(rows: list[dict[str, Any]], table_id: str, max_height: int = 410) -> None:
+    """Render a compact, theme-controlled table with explicit Streamlit sorting."""
     if not rows:
         st.info("No rows are available for this view.")
         return
     columns = list(rows[0])
+    sort_control, order_control, filter_control, _ = st.columns([1.25, 1.15, 1.85, 2.0])
+    with sort_control:
+        sort_column = st.selectbox("Sort by", ("Current order", *columns), key=f"{table_id}_sort_column")
+    with filter_control:
+        row_filter = st.text_input(
+            "Find in table",
+            placeholder="Country, region, signal, or status",
+            key=f"{table_id}_row_filter",
+        )
+    normalized_row_filter = row_filter.strip().casefold()
+    if normalized_row_filter:
+        rows = [
+            row
+            for row in rows
+            if normalized_row_filter in " ".join(
+                value for value in row.values() if isinstance(value, str)
+            ).casefold()
+        ]
+    if not rows:
+        st.info("No rows match this table filter.")
+        return
+    if sort_column != "Current order":
+        with order_control:
+            sort_order = st.selectbox(
+                "Order",
+                ("Low to high or A to Z", "High to low or Z to A"),
+                key=f"{table_id}_sort_order",
+            )
+        available_rows = [row for row in rows if row.get(sort_column) not in {None, "", "Not available", "Not calculated"}]
+        unavailable_rows = [row for row in rows if row.get(sort_column) in {None, "", "Not available", "Not calculated"}]
+        rows = sorted(
+            available_rows,
+            key=lambda row: table_sort_value(row[sort_column]),
+            reverse=sort_order == "High to low or Z to A",
+        ) + unavailable_rows
     header_html = "".join(f"<th>{escape(column)}</th>" for column in columns)
     body_html = []
     for row in rows:
@@ -471,6 +521,48 @@ def render_coverage_chart(coverage_rows: list[dict[str, Any]], palette: dict[str
     st.altair_chart(chart, use_container_width=True)
 
 
+def render_research_signal_overview(rows: list[dict[str, Any]], palette: dict[str, str]) -> None:
+    """Show the size of each descriptive research shortlist."""
+    overview_rows = [
+        {
+            "Signal": "High GDP change and low life gain",
+            "Countries": sum(
+                HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN in signal_options(row)
+                for row in rows
+            ),
+        },
+        {
+            "Signal": "GDP per capita and unemployment both increased",
+            "Countries": sum(
+                GDP_PER_CAPITA_INCREASE_WITH_UNEMPLOYMENT_INCREASE in signal_options(row)
+                for row in rows
+            ),
+        },
+    ]
+    chart = (
+        alt.Chart(alt.Data(values=overview_rows))
+        .mark_bar(cornerRadiusEnd=4)
+        .encode(
+            x=alt.X("Countries:Q", title="Countries", scale=alt.Scale(nice=True)),
+            y=alt.Y("Signal:N", title=None, sort="-x", axis=alt.Axis(labelLimit=330)),
+            color=alt.Color(
+                "Signal:N",
+                scale=alt.Scale(
+                    domain=[row["Signal"] for row in overview_rows],
+                    range=[palette["selected"], palette["line"]],
+                ),
+                legend=None,
+            ),
+            tooltip=[alt.Tooltip("Signal:N", title="Research signal"), alt.Tooltip("Countries:Q", title="Countries")],
+        )
+        .properties(height=105)
+        .configure(background=palette["background"])
+        .configure_view(stroke=palette["grid"])
+        .configure_axis(labelColor=palette["text"], titleColor=palette["text"], gridColor=palette["grid"])
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+
 def main() -> None:
     appearance = st.sidebar.radio("Appearance", ("Light", "Dark"), index=0, horizontal=True)
     palette = apply_theme(appearance)
@@ -518,7 +610,7 @@ def main() -> None:
             max_value=available_years[-1],
             value=(available_years[0], available_years[-1]),
             step=1,
-            help="The dashboard recalculates descriptive changes and research-signal thresholds from the local country-year data. It does not call the API.",
+            help="Changing dates recalculates each country’s start-to-end change and the research-signal thresholds. Signal counts can rise or fall. They are not cumulative totals. The dashboard does not call the API.",
         )
     else:
         selected_period = (available_years[0], available_years[-1])
@@ -572,34 +664,48 @@ def main() -> None:
         )
         table_view = st.radio(
             "Shortlist view",
-            ("All country comparisons", "Research signals", "Some core data unavailable"),
+            ("All country comparisons", "Research signals"),
             horizontal=True,
-            help="Research signals are descriptive prompts for further investigation. Missing core data is a data-quality flag, not an analytical conclusion.",
+            help="Research signals are descriptive prompts for further investigation. Missing core values are shown in the full comparison table as a data-quality flag.",
         )
         if table_view == "Research signals":
-            table_rows = [
+            research_rows = [
                 row
                 for row in filtered_rows
                 if any(signal not in {"none", INSUFFICIENT_CORE_DATA} for signal in signal_options(row))
             ]
-        elif table_view == "Some core data unavailable":
-            table_rows = [row for row in filtered_rows if INSUFFICIENT_CORE_DATA in signal_options(row)]
+            st.markdown('<div class="visual-heading">Research signal overview</div>', unsafe_allow_html=True)
+            st.caption("Counts reflect the current region and income filters. A country can meet both rules.")
+            render_research_signal_overview(research_rows, palette)
+            selected_signal_filter = st.selectbox(
+                "Research signal",
+                tuple(RESEARCH_SIGNAL_FILTERS),
+            )
+            selected_signal_code = RESEARCH_SIGNAL_FILTERS[selected_signal_filter]
+            table_rows = [
+                row
+                for row in research_rows
+                if (selected_signal_code is None or selected_signal_code in signal_options(row))
+            ]
         else:
             table_rows = filtered_rows
         view_explanations = {
             "Research signals": "Countries flagged by one or more transparent research rules. The “Research signal(s)” column tells you which rule applies.",
-            "Some core data unavailable": "An endpoint is unavailable for at least one core measure. This is a data-quality flag, not a finding.",
-            "All country comparisons": "Full reference list with all six selected-period changes.\nGDP growth and secondary enrolment add context only. They do not trigger a research signal.",
+            "All country comparisons": "Full reference list with all six selected-period changes.\nCore-data status identifies the missing core measure when a comparison is unavailable. GDP growth and secondary enrolment add context only. They do not trigger a research signal.",
         }
-        st.markdown(
-            f'<div><span class="dynamic-number">{len(table_rows)}</span> shown of '
-            f'<span class="dynamic-number">{len(filtered_rows)}</span> countries and economies matching the current filters.</div>',
-            unsafe_allow_html=True,
-        )
-        if table_view == "Some core data unavailable":
-            render_table(display_missing_core_rows(table_rows))
+        if table_view == "Research signals":
+            table_count_text = (
+                f'<span class="dynamic-number">{len(table_rows)}</span> shown of '
+                f'<span class="dynamic-number">{len(research_rows)}</span> countries with a research signal.'
+            )
         else:
-            render_table(display_all_comparison_rows(table_rows))
+            table_count_text = (
+                f'<span class="dynamic-number">{len(table_rows)}</span> shown of '
+                f'<span class="dynamic-number">{len(filtered_rows)}</span> countries and economies matching the current filters.'
+            )
+        st.markdown(f"<div>{table_count_text}</div>", unsafe_allow_html=True)
+        render_table(display_all_comparison_rows(table_rows), table_id=f"shortlist_{table_view}")
+        st.markdown('<div class="after-table-space"></div>', unsafe_allow_html=True)
         st.markdown(
             f'<div class="table-context-note">{escape(view_explanations[table_view])}</div>',
             unsafe_allow_html=True,
@@ -709,7 +815,7 @@ def main() -> None:
                     }
                     for row in peer["metrics"]
                 ]
-                render_table(peer_table_rows, max_height=260)
+                render_table(peer_table_rows, table_id="country_comparison", max_height=260)
                 st.caption("✱ “Not available” means a selected-period value is missing. Differences need both values.")
                 st.markdown('<div class="visual-heading">Visual comparison</div>', unsafe_allow_html=True)
                 render_group_comparison_chart(peer["metrics"], palette, selected["country_name"], peer["group_name"])
@@ -759,9 +865,9 @@ def main() -> None:
                     render_trend_chart("Unemployment, total (% of total labor force)", "Labor-force share without work. Change uses percentage points.", trend_rows, "unemployment_total_pct", palette)
                     render_trend_chart("Population", "Context for other measures. It is not a research signal by itself.", trend_rows, "population_total", palette)
                 st.divider()
-                st.subheader("Supplementary indicators")
+                st.subheader("Extra context")
                 st.markdown(
-                    '<div class="supplementary-note"><span>✱</span>Context only. Annual GDP growth shows year-to-year pace. Secondary enrolment adds education context but has lower coverage. Neither changes a research signal.</div>',
+                    '<div class="supplementary-note"><span>✱</span>Extra information only. GDP growth shows yearly change. Secondary enrolment shows education data, but it is missing for more countries. These indicators do not create research signals.</div>',
                     unsafe_allow_html=True,
                 )
                 supplementary_left, supplementary_right = st.columns(2)
@@ -786,7 +892,7 @@ def main() -> None:
             f"{quality['country_count']} countries and economies. Missing values are unavailable, not zero."
         )
         st.markdown("#### Coverage details")
-        render_table(coverage_rows, max_height=280)
+        render_table(coverage_rows, table_id="coverage", max_height=280)
         with st.expander("Research-signal definitions and limits", expanded=False):
             signal_definition = definitions[HIGH_GDP_PER_CAPITA_CHANGE_LOW_LIFE_EXPECTANCY_GAIN]
             st.markdown(

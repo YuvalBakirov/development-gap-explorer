@@ -186,34 +186,6 @@ def display_all_comparison_rows(rows: list[dict[str, Any]]) -> list[dict[str, An
     return result
 
 
-def display_missing_core_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Prepare the data-quality view around the four measures used by the product.
-
-    This deliberately omits the two supplementary context measures.  When the
-    user is investigating an unavailable core comparison, the useful question
-    is which of the required endpoint measures is missing, not whether an
-    unrelated context series happens to be available.
-    """
-    result: list[dict[str, Any]] = []
-    for row in rows:
-        missing_measures = ", ".join(
-            item.strip() for item in str(row.get("missing_core_metrics") or "").split(";") if item.strip()
-        ) or "Not specified"
-        result.append(
-            {
-                "Country": row["country_name"],
-                "World Bank region": row["region_name"].strip(),
-                "Income group": row["income_level_name"],
-                "GDP per capita change (%)": rounded_value(row["gdp_per_capita_change_pct"]),
-                "Life expectancy change (years)": rounded_value(row["life_expectancy_change_years"]),
-                "Unemployment change (pp)": rounded_value(row["unemployment_change_pp"]),
-                "Population change (%)": rounded_value(row["population_change_pct"]),
-                "Missing core measure(s)": missing_measures,
-            }
-        )
-    return result
-
-
 def rounded_value(value: str | float | int | None) -> float | None:
     numeric_value = as_float(value)
     return None if numeric_value is None else round(numeric_value, 2)

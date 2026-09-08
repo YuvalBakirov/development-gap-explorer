@@ -9,7 +9,6 @@ from src.dashboard_data import (
     core_data_status,
     country_trend_rows,
     display_all_comparison_rows,
-    display_missing_core_rows,
     display_progress_rows,
     display_summary_rows,
     load_dashboard_data,
@@ -111,25 +110,6 @@ class DashboardDataTests(unittest.TestCase):
         self.assertEqual(result["Secondary enrolment change (pp)"], 2.5)
         self.assertIsNone(result["Unemployment change (pp)"])
         self.assertEqual(result["Research signal(s)"], "No descriptive signal")
-
-    def test_missing_core_view_excludes_context_measures_and_names_missing_measure(self):
-        result = display_missing_core_rows(
-            [{
-                "country_name": "Example",
-                "region_name": " Region ",
-                "income_level_name": "High income",
-                "gdp_per_capita_change_pct": "12.5",
-                "life_expectancy_change_years": "1.2",
-                "unemployment_change_pp": "",
-                "population_change_pct": "3.0",
-                "gdp_per_capita_growth_change_pp": "-1.25",
-                "secondary_enrollment_change_pp": "2.5",
-                "missing_core_metrics": "Unemployment;GDP per capita",
-            }]
-        )[0]
-        self.assertEqual(result["Missing core measure(s)"], "Unemployment, GDP per capita")
-        self.assertNotIn("GDP growth change (pp)", result)
-        self.assertNotIn("Secondary enrolment change (pp)", result)
 
     def test_load_dashboard_data_uses_latest_run(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
