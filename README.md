@@ -130,7 +130,7 @@ source .venv/bin/activate
 Then install and run the product:
 
 ```text
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
 python etl.py
 streamlit run app.py
 ```
