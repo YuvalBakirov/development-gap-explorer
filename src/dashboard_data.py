@@ -63,8 +63,8 @@ def latest_run_directory() -> Path:
 def load_dashboard_data() -> dict[str, Any]:
     """Load the latest output without changing data or calling the API."""
     pointer_path = processed_data_root() / "latest_run.json"
-    pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
     run_directory = latest_run_directory()
+    pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
     progress_files = sorted(run_directory.glob("country_progress_*.csv"))
     summary_files = sorted(run_directory.glob("metrics_summary_*.json"))
     if len(progress_files) != 1 or len(summary_files) != 1:

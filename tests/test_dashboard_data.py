@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from src.dashboard_data import (
+    DashboardDataError,
     core_data_status,
     country_trend_rows,
     display_all_comparison_rows,
@@ -130,6 +131,12 @@ class DashboardDataTests(unittest.TestCase):
             with patch("src.dashboard_data.processed_data_root", return_value=root):
                 loaded = load_dashboard_data()
             self.assertEqual(loaded["run_directory"], run)
+
+    def test_load_dashboard_data_explains_when_etl_has_not_run(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            with patch("src.dashboard_data.processed_data_root", return_value=Path(temporary_directory)):
+                with self.assertRaisesRegex(DashboardDataError, "No successful ETL run found"):
+                    load_dashboard_data()
 
     def test_peer_comparison_uses_median_and_excludes_selected_country(self):
         rows = [

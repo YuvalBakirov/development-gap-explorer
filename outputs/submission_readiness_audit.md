@@ -22,7 +22,7 @@ Reviewed against `AI_Data_Engineer_Candidate_Assignment.docx` on 2026-09-08.
 
 ## Latest validation evidence
 
-On 2026-09-08, the project passed all 21 automated tests and `app.py`
+On 2026-09-08, the project passed all 22 automated tests and `app.py`
 compiled successfully. A real `python etl.py` run retrieved a new World Bank
 snapshot and produced 3,255 country-year rows for 217 countries/economies.
 No manual data preparation, database, credential, or project-global package is

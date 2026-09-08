@@ -1,78 +1,28 @@
-# סטטוס פרויקט Development Gap Explorer
+# Project status
 
-עודכן לאחר אישור בדיקת ההיתכנות
+Updated on 2026-09-08 after final validation.
 
-## מצב נוכחי
+## Submission status
 
-ה־ETL המלא והחישובים התיאוריים עובדים על נתוני World Bank אמיתיים. כעת נבנה
-דשבורד Streamlit שקורא את הריצה האחרונה בלבד, ללא הורדה מחדש של נתונים.
+Ready for submission. The repository contains the Python ETL, local raw and
+processed data structure, Streamlit application, automated tests, README,
+AI transcript material, and Git history.
 
-## שלבים
+## Latest validated run
 
-- [x] הגדרת המוצר והמשתמש העסקי
-- [x] בחירת World Bank Indicators API
-- [x] בדיקת API אמיתית לשנים 2010-2024
-- [x] אימות הגדרות ששת האינדיקטורים
-- [x] הפרדה בין 217 מדינות או כלכלות לבין 78 אגרגטים
-- [x] מדידת כיסוי, חוסרים, pagination ו־join viability
-- [x] החלטה להמשיך עם ארבעה מדדי ליבה
-- [x] יצירת שלד הפרויקט ו־configuration מרכזי
-- [x] בניית extraction עם retries, pagination ו־raw cache
-- [x] בדיקות אוטומטיות מקומיות לשכבת extraction
-- [x] הרצה מלאה של שכבת extraction מול API מתוך סביבת פיתוח עם גישת אינטרנט
-- [x] בניית transformations וטבלת country-year עם בדיקות מקומיות
-- [x] הרצה מלאה של ה־ETL מול API ובדיקת קבצי ה־raw וה־processed בפועל
-- [x] הוספת בדיקות איכות ודוח quality
-- [x] בניית שכבת metrics להשוואת התקדמות כלכלית וחברתית
-- [x] בניית דשבורד Streamlit ראשוני: סינון, טבלה ומגמות שנתיות
-- [x] בדיקות אוטומטיות ו־README מלא
-- [x] הרחבת dashboard: חלון זמן, קבוצת השוואה ברורה, גרף פיזור והסברי אותות
-- [x] שיפור חוויית dashboard: ברירת מחדל ישראל, shortlist, מדדי משנה ומצב בהיר/כהה
-- [x] הרחבת אמינות: הסגר מתועד ופרסום latest לאחר metrics
-- [ ] הוספת תמליל AI מלא ואימות הרצה מתוך clone נקי לפני הגשה
+- The World Bank API extraction completed successfully for 2010-2024.
+- The run retained 217 countries and economies and excluded 78 aggregates.
+- The transformation created 3,255 country-year rows.
+- The quality status was `passed_with_missing_values`.
+- The metrics layer identified 173 complete core comparisons, 9 GDP and life
+  expectancy research signals, and 48 GDP and unemployment research signals.
+- All 22 automated tests passed on 2026-09-08.
 
-## החלטות שאושרו
+## Deliberate scope
 
-- המוצר מיועד לאנליסטים בתחום הפיתוח והמדיניות.
-- המוצר מזהה פערים שראויים למחקר נוסף.
-- המוצר אינו מספק ייעוץ השקעות, תחזיות או מסקנות סיבתיות.
-- תקופת העבודה הראשונית היא 2010-2024.
-- מדדי הליבה הם תוצר לנפש, אבטלה, תוחלת חיים ואוכלוסייה.
-- צמיחת תוצר לנפש היא מדד משלים.
-- הרשמה לחינוך תיכוני היא שכבה אופציונלית בגלל כיסוי נמוך.
+The dashboard is a descriptive research-prioritization tool. It does not
+provide investment advice, forecasts, causal conclusions, or country ratings.
+The secondary-enrolment indicator is included as context only because its
+coverage is lower than the four core measures.
 
-## השלב הבא
-
-בסיס ה־ETL הושלם. הוא כולל מבנה תיקיות נקי, קובץ הגדרות, לקוח API, retries,
-pagination, שמירת כל עמוד raw data, manifest של הריצה, ו־staging שמונע מריצה
-חלקית להפוך לדאטה הרשמי. 18 בדיקות אוטומטיות עברו מקומית, כולל שכבת metrics,
-שכבת טעינת הדשבורד, ומקרה שבו metrics נכשל ולכן אין עדכון של `latest_run.json`.
-
-הרצת ה־ETL המלאה של הקוד המעודכן הצליחה מול ה־API בריצה
-`run-20260908T074155610379Z`. היא יצרה 3,255 שורות country-year, סיימה ב־
-`passed_with_missing_values`, ולא מצאה כפילויות, ישויות לא ממופות או ערכים
-לא תקינים. דוח קריא נמצא ב־`outputs/etl_run_validation_report.md`.
-
-שכבת המדדים חושבה על הנתונים בפועל. היא יוצרת טבלה לכל מדינה עם ערכי התחלה,
-סיום ושינוי בארבעת מדדי הליבה, ומסמנת דגלים תיאוריים ושקופים למחקר נוסף.
-החישוב והכללים מתועדים ב־`outputs/metrics_validation_report.md`.
-
-נבנה דשבורד Streamlit ראשוני. הוא מציג סיכום תקופה, טבלת מדינות מסוננת,
-מגמות של מדינה בודדת, והסברים על חוסרים ודגלים. ההרצה החזותית הראשונה תבוצע
-ב־VS Code לאחר התקנת Streamlit מתוך `requirements.txt`.
-
-## דרך העבודה והמעקב
-
-בכל שלב יבוצע אותו מחזור:
-
-1. הסבר קצר מראש על מטרת השלב והחלטות התכנון.
-2. שינוי קטן וממוקד בקוד.
-3. הרצה ובדיקת התוצאה.
-4. פתיחת הקבצים או התוצאה בתוך Codex לצפייה.
-5. commit מתואר וברור ב־Git.
-6. עדכון הקובץ הזה וסיכום של מה הושלם ומה מגיע אחריו.
-
-## היסטוריית Git נוכחית
-
-- `f04b93a` - יצירת spike שחזורי ל-World Bank API.
-- `8cc677c` - שמירת דגימות raw ותוצאות ההיתכנות שנמדדו.
+The GitHub repository was confirmed publicly accessible on 2026-09-08.

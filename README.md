@@ -41,8 +41,7 @@ failed to improve wellbeing, or explain why a pattern occurred.
 
 ## Source and indicators
 
-Source: [World Bank Indicators API](https://api.worldbank.org/v2/). No API key
-is required.
+Source: [World Bank Indicators API documentation](https://datahelpdesk.worldbank.org/knowledgebase/articles/898581-api-basic-call-structures). No API key is required. The pipeline calls the technical API endpoint `https://api.worldbank.org/v2` and requests JSON responses.
 
 ### Data attribution and license
 
